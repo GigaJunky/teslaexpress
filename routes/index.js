@@ -51,7 +51,8 @@ router.get('/', function (req, res, next) {
   //var options = { authToken: token.access_token }
 
   tjs.vehicles(voptions, function (err, vehicles) {
-    if (err) console.log("Error: " + err)
+    console.log("vehicles: ", err)
+    if (!err){
     console.log('vehicles: ', vehicles)
     var vehicle = vehicles[0];
 
@@ -61,9 +62,9 @@ router.get('/', function (req, res, next) {
         else console.log("WakeUp command: Succeeded, Vehicle state: " + result.state)
       })
     }
+  }
     res.render('vehicles', {err: err, vehicles: vehicles })
     //res.json({err: err,  vehicles: vehicles})
-
   })
 })
 

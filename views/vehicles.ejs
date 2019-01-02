@@ -8,10 +8,11 @@
 
 <body onload="bodyOnload()">
   <h1>Vehicles</h1>
+  <h3 style="color: red"><%= err%></h3>
   <div class="btn-group" role="group" aria-label="Basic example"></div>
     <button class="btn btn-dark" onclick="teslaCmd('wakeUp')">Wake Up</button>
     <div id='message'>message</div>
-    <div id='state' class='vstate'><%= vehicles[0].state %></div>
+    <div id='state' class='vstate'><%= vehicles ? vehicles[0].state : err %></div>
   </div>
 
   
@@ -24,7 +25,8 @@
       <th>ID</th>
       <th>VIN</th>
       <th>State</th>
-      <% for(var i=0; i < vehicles.length; i++){
+      <% if(vehicles)
+          for(var i=0; i < vehicles.length; i++){
            var v = vehicles[i]
          %>
       <tr onclick="window.location = 'vehicleData'">
