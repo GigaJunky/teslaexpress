@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vehicles</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+  <link rel="stylesheet" href="/stylesheets/style.css"/>
+</head>
+
+<body onload="bodyOnload()">
+  <h1>Vehicles</h1>
+  <div class="btn-group" role="group" aria-label="Basic example"></div>
+    <button class="btn btn-dark" onclick="teslaCmd('wakeUp')">Wake Up</button>
+    <div id='message'>message</div>
+    <div id='state' class='vstate'><%= vehicles[0].state %></div>
+  </div>
+
+  
+  <table class="table table-striped table-dark table-bordered table-hover">
+    <caption><b>Vehicles</b></caption>
+    <thead>
+      <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>ID</th>
+      <th>VIN</th>
+      <th>State</th>
+      <% for(var i=0; i < vehicles.length; i++){
+           var v = vehicles[i]
+         %>
+      <tr onclick="window.location = 'vehicleData'">
+          <td><%= i %></td>
+          <td><%= v.display_name %></td>
+          <td><%= v.id %></td>
+          <td><%= v.vin %></td>
+          <td class='vstate'><%= v.state %></td>
+      </tr>
+      <% } %>
+    </tr>
+    </thead>
+  </table>
+ 
+</body>
+<script type="text/javascript" src="javascripts/utils.js">
+</script>
+</html>
+  

@@ -1,0 +1,24 @@
+body {
+  background-color: black;
+  color: antiquewhite;
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+table caption {
+background-color: black;
+color: white;
+caption-side: top;
+text-align: center
+}
+
+table-plain tbody tr,
+.table-plain tbody tr:hover,
+.table-plain tbody td {
+  background-color:transparent;
+  border:none;
+}

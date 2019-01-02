@@ -1,0 +1,254 @@
+<%
+function printP(o, p)
+{
+  if(p === 'timestamp')
+    return '<b>' + new Date(o[p]).toLocaleString() + '</b>'
+  else if (p.includes('temp') && !p.includes('_temp_direction') && !p.includes('gui_temp') ) return o[p] + ' C / ' + Math.round( o[p] * 9 / 5 + 32) + ' F '
+  else return formatTxt(o[p] + '' )
+}
+
+function formatTxt(b)
+{
+  switch(b){
+    case 'true' : return '<span style="color:green">Yes</span>'
+    case 'false' : return '<span style="color:red">No</span>'
+    case 'null' : return '<span style="color:yellow">?</span>'
+    default: return b
+  }
+}
+
+function humanize(str)
+{
+  var frags = str.split('_')
+  for (i=0; i<frags.length; i++)
+  switch(frags[i]) {
+    case 'df': frags[i] = 'Driver Door'; break
+    case 'dr': frags[i] = 'Driver Side Rear Door'; break
+    case 'pf': frags[i] = 'Passenger Door'; break
+    case 'pr': frags[i] = 'Passenger Side Rear Door'; break
+    case 'rt': frags[i] = 'Trunk'; break
+    case 'ft': frags[i] = 'Frunk'; break
+    default:
+      frags[i] = frags[i].charAt(0).toUpperCase() + frags[i].slice(1)
+  }
+    
+  
+  return frags.join(' ')
+}
+
+//function printN(n) { return n.replace(/_/g, ' ') }
+
+function objTable(o, c)
+{
+  const className = "table table-striped table-dark table-bordered table-hover"
+  var t = '<table class="' + className + '"><caption data-toggle="collapse" data-target="#' + c + '" class="clickable"><b>' + humanize(c) + '</b></caption><tbody id="' + c +  '">'
+  
+  for (var p in o) 
+    if(typeof(o[p]) !== 'object' || o[p] === null)
+      t+= '<tr><td><b>' + humanize(p) + '</b></td><td>' + printP(o, p) + '</td></tr>'
+   t+= '</tbody></table>'
+
+  for (var p in o) 
+    if(typeof(o[p]) === 'object' && o[p] !== null)
+     t+= objTable(o[p], p)
+  
+t+= '</tbody></table>'
+
+ return t
+}
+
+%>
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>
+    <%= title %>
+  </title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+  <link rel="stylesheet" href="/stylesheets/style.css"/>
+</head>
+
+<body onload="bodyOnload()">
+  <% if(vdata) { %>
+  <h1>
+    <%= vdata.display_name + ' VIN:' + vdata.vin %>
+  </h1>
+  <p>
+    <%= vdata.vehicle_config.car_type  %>
+    <%= vdata.vehicle_config.exterior_color  %>
+    <a href='https://www.google.com/maps/search/?api=1&query=<%= vdata.drive_state.latitude %>,<%= vdata.drive_state.longitude %>'>Google Map Location</a>
+  </p>
+  <p>
+  <div class="btn-group" role="group" aria-label="Basic example"></div>
+    <button class="btn btn-dark" onclick="teslaCmd('flashLights')">Flash Lights</button>
+    <button class="btn btn-dark" onclick="teslaCmd('honkHorn')">Honk Horn</button>
+    <button class="btn btn-dark" onclick="teslaCmd('openTrunk')">Open Trunk</button>
+    <button class="btn btn-dark" onclick="wakeUpStatus()">Wake Up</button>
+    <div id='message'>message</div>
+    <div id='state' class='vstate'>state</div>
+  </div>
+</p>
+
+
+<div class="accordion" id="accordionExample">
+
+    <div class="card">
+        <div class="card-header" id="heading7">
+          <h2 class="mb-0">
+            <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapse7" aria-expanded="false" aria-controls="collapse7">
+                Controls
+            </button>
+          </h2>
+        </div>
+        <div id="collapse7" class="collapse" aria-labelledby="heading7" data-parent="#accordionExample">
+            
+            <div class="container">
+                <div class="row">
+                  <div class="col">
+                      <button class="btn btn-dark" onclick="teslaCmd('flashLights')">Flash Lights</button>
+                  </div>
+                  <div class="col">
+                      <button class="btn btn-dark" onclick="teslaCmd('honkHorn')">Honk Horn</button>
+                  </div>
+                  <div class="col">
+                      <button class="btn btn-dark" onclick="teslaCmd('climateStart')">Climate Start</button>
+                  </div>
+                  <div class="col">
+                      <button class="btn btn-dark" onclick="teslaCmd('climateStop')">Climate Stop</button>
+                  </div>
+                  <div class="col">
+                      <button class="btn btn-dark" onclick="teslaCmd('homeLink')">Home Link</button>
+                  </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <button class="btn btn-dark" onclick="teslaCmd('openFrunk')">Open Frunk</button>
+                    </div>
+                  <div class="col">
+                      <button class="btn btn-dark" onclick="teslaCmd('openTrunk')">Open Trunk</button>
+                  </div>
+                  <div class="col">
+                      <button class="btn btn-dark" onclick="teslaCmd('doorUnlock')">Unlock Doors</button>
+                  </div>
+                  <div class="col">
+                      <button class="btn btn-dark" onclick="teslaCmd('doorLock')">Locks Doors</button>
+                  </div>
+
+                  <div class="col">
+                      <button class="btn btn-dark" onclick="teslaCmd('startCharge')">Start Charge</button>
+                  </div>
+                  <div class="col">
+                      <button class="btn btn-dark" onclick="teslaCmd('stopCharge')">Stop Charge</button>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col">
+                    <input type="text" id="chargeLimit" class="form-control">
+                    <button class="btn btn-dark" onclick="setChargeLimit();">Set Charge Limit</button>
+                  </div>
+                </div>
+
+              </div>
+        </div>
+    </div>
+
+
+    <div class="card">
+        <div class="card-header" id="heading6">
+          <h2 class="mb-0">
+            <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapse6" aria-expanded="false" aria-controls="collapse6">
+                Vehicle State
+            </button>
+          </h2>
+        </div>
+        <div id="collapse6" class="collapse" aria-labelledby="heading6" data-parent="#accordionExample">
+            <%- objTable(vdata.vehicle_state, 'vehicle_state') %>
+        </div>
+    </div>
+
+
+    <div class="card">
+      <div class="card-header" id="headingOne">
+        <h2 class="mb-0">
+          <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+            Climate
+          </button>
+        </h2>
+      </div>
+  
+      <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
+            <%- objTable(vdata.climate_state, 'climate_state') %>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" id="headingTwo">
+        <h2 class="mb-0">
+          <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+            Charge
+          </button>
+        </h2>
+      </div>
+      <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+          <%- objTable(vdata.charge_state, 'charge_state') %>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" id="headingThree">
+        <h2 class="mb-0">
+          <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+              GUI Settings
+          </button>
+        </h2>
+      </div>
+      <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
+          <%- objTable(vdata.gui_settings, 'GUI Settings') %>
+      </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header" id="heading4">
+          <h2 class="mb-0">
+            <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapse4" aria-expanded="false" aria-controls="collapse4">
+                Vehicle Config
+            </button>
+          </h2>
+        </div>
+        <div id="collapse4" class="collapse" aria-labelledby="heading4" data-parent="#accordionExample">
+            <%- objTable(vdata.vehicle_config, 'Vehicle Config') %>
+        </div>
+      </div>
+  
+      <div class="card">
+          <div class="card-header" id="heading5">
+            <h2 class="mb-0">
+              <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapse5" aria-expanded="false" aria-controls="collapse5">
+                  Drive State
+              </button>
+            </h2>
+          </div>
+          <div id="collapse5" class="collapse" aria-labelledby="heading5" data-parent="#accordionExample">
+              <%- objTable(vdata.drive_state, 'Drive State') %>
+          </div>
+        </div>
+
+  
+  </div>
+
+<% } else {  %>
+   No Vehicle Data
+   <a href="/">Vehicles</a>
+   <% } %>
+
+ 
+</body>
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+<script type="text/javascript" src="javascripts/utils.js"></script>
+</html>
+  
