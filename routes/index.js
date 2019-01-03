@@ -16,7 +16,10 @@ const
   , voptions = require('../data/vtoken.json')
   , jsondiffpatch = require('jsondiffpatch').create(jdOpts)
 
-  
+/**
+ * saves json as vdata.json and compares with jsondiffpatch and saves if there are any differences and saves as vdelta + vehicle_state.timestamp (ignoring timestamp, gps_as_of, tokens)
+ * @param {*} ujson updated json
+ */
 function saveFile(ujson) {
     console.log('saveFile: ', ujson.vehicle_state.timestamp)
 
@@ -33,7 +36,7 @@ function saveFile(ujson) {
       }
     })
 }
-
+/** */
 function readFile(fn, cb) {
   fs.readFile('./data/vdata.json', (err, data) => {  
     cb( { err: err, data: data } )
@@ -41,6 +44,7 @@ function readFile(fn, cb) {
 }
 
 router.get('/vdatat', function (req, res, next) {
+
   fs.readFile('vdata.json', (e, d) => {
     res.render('vdata', { title: 'Tesla Vehicle Data T', vdata: JSON.parse(d) })
   })
@@ -84,19 +88,10 @@ router.get('/vehicleControls', function (req, res, next) {
     
   })
 })
-
-
-function vehicleData(voptions, cb){
-  tjs.vehicleData(voptions, function (err, vehicle) {
-    if (!err){
-      console.log("\nVehicle " + vehicle.vin + " - " + tjs.getModel(vehicle) + " ( '" + vehicle.display_name + "' ) is: " + vehicle.state)
-        saveFile(vehicle)
-    }
-    console.log('Veh Data:', err, vehicle)
-    return cb(vehicle)
-  })
-}
-
+/**
+ * @param {voptions} voptions - must contain the vehicle_ID
+ * @param {*} cb callback vehicleData
+ */
 function vehicleData(voptions, cb){
   tjs.vehicleData(voptions, function (err, vehicle) {
     if (!err){
