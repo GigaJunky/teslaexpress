@@ -3,7 +3,7 @@
 var wakeUpTimmer = null
 
 
-function bodyOnload()
+function bodyOnloadX()
 {
   console.log('bodyOnload')
   wakeUpStatus()

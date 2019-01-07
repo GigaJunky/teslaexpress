@@ -1,23 +1,10 @@
 const
-fs = require('fs')
-tjs = require('teslajs')
- , voptions = require('../data/vtoken.json')
+ voptions = require('../data/vtoken.json')
 , Poller = require('./poller')
+, tjx = require ('../routes/teslaxlib')
 
-
-const jdOpts = {
-    textDiff: { minLength: 160 },
-    propertyFilter: function(name, context) {
-        if(name === 'timestamp') return false
-        if(name === 'gps_as_of') return false
-        if(name === 'tokens') return false
-        return true
-      }
-  }
-  , jsondiffpatch = require('jsondiffpatch').create(jdOpts)  
-
-var pollMins = 1, sleepMins = 30, onlineMins = 5
-let poller = new Poller( pollMins * 60 * 1000)
+var pollInterval = 60, sleepMins = 30, onlineMins = 5, lastWakeup
+let poller = new Poller( pollInterval * 1000)
 
 poller.onPoll(() => {
     CheckStates()
@@ -29,60 +16,61 @@ poller.poll()
 
 function CheckStates()
 {
-    tjs.vehicles(voptions, function (err, vehicles) {
-        if(err) console.log(err)
+    var now = new Date()
+    tjx.vehicles(voptions, (err, vehicles) => {
+        console.log('get Vehicles!: ', err, vehicles.length)
+        if(err) console.error(err)
+
         for(var v of vehicles){
-            console.log("vehicles: ", v.display_name, v.state, new Date().toLocaleString())
+            console.log("vehicle: ", v.display_name, v.state, v.in_service, now.toLocaleString())
             switch(v.state) {
                 case 'asleep':
-                    tjs.wakeUp(voptions, function (err, result) {
-                        if (err) console.error(err)
-                        else console.log("WakeUp command: Succeeded, Vehicle state: " + result.state)
+                    if(false)
+                    tjx.wakeUp(voptions, function (err, result) {
+                        if (err) console.error('wakeup err: ', err)
+                        else 
+                        console.log("WakeUp command: Succeeded, Vehicle state: " + result.state)
                     })
                     break
                 case 'online':
-                    vehicleData(voptions, (err, vdata) => console.log('vdata: ', err))
+                    console.log('online in service', v.in_service)
+                    //if (!v.in_service)
+                        tjx.vehicleData(voptions, (err, vdata) =>{ if (err) console.error('vdata: ', err)})
+                    //else
+                    //    tjx.lastVehicleData(voptions, (err, vehicle) =>{
+                    //        console.log('Online !_in_service lastVehicleData: ', err,  elapsedSC(vehicle.vehicle_state.timestamp))
+                    //    })
+
                     break
                 default:
                     console.log('poll State Not online : ',  v.state )
-
-
+                    tjx.lastVehicleData(voptions, (err, vehicle) =>{
+                        console.log('Offline lastVehicleData: ', err, elapsedSC(vehicle.vehicle_state.timestamp))
+                    })
             }
             //if(v.state === 'online') vehicleData(voptions, (err, vdata) => console.log('vdata: ', err))
         }
     })
 }
 
-function vehicleData(voptions, cb){
-    tjs.vehicleData(voptions, function (err, vehicle) {
-      if (!err){
-        //console.log("\nVehicle " + vehicle.vin + " - " + tjs.getModel(vehicle) + " ( '" + vehicle.display_name + "' ) is: " + vehicle.state)
-        saveFile(vehicle)
-      }
-      //console.log('Veh Data:', err, vehicle)
-      return cb(err, vehicle)
-    })
-  }
+function elapsed(timestamp)
+{
+    var now = Date.now()
+    console.log('elapsed', timestamp, now, (now - timestamp) / 1000)
+}
 
-  function saveFile(ujson) {
-    fs.readFile('../data/vdata.json', (err, fdata) => {
-      if(err) console.log('readfile error: ', err)
-      var pjson = {}
-      if(!err) pjson = JSON.parse(fdata)
-      var delta = jsondiffpatch.diff(pjson, ujson)
-      if(delta){
-        console.log('save file delta: ', new Date().toLocaleString(), delta)
-        console.log('saveFile: ', ujson.vehicle_state.timestamp)
-        fs.writeFile('../data/vdata.json',                                       JSON.stringify( ujson, null, '\t'), (e, d) => console.log(e))
-        fs.writeFile('../data/vdata'  + ujson.vehicle_state.timestamp + '.json', JSON.stringify( ujson, null, '\t'), (e, d) => console.log(e))
-        fs.writeFile('../data/vdelta' + ujson.vehicle_state.timestamp + '.json', JSON.stringify( delta, null, '\t'), (e, d) => console.log(e))
-      }
-      else console.log('saveFile No Change', new Date().toLocaleString())
+//https://stackoverflow.com/questions/13903897/javascript-return-number-of-days-hours-minutes-seconds-between-two-dates
+function elapsedSC(timestamp)
+{
+    var r = {}, d = Math.abs(Date.now() - timestamp) / 1000
+    , s = { year: 31536000, month: 2592000, week: 604800, day: 86400, hour: 3600, minute: 60,second: 1 } // uncomment row to ignore// feel free to add your own row
+    Object.keys(s).forEach(function(key){
+        r[key] = Math.floor(d / s[key])
+        d -= r[key] * s[key]
     })
+    return `${r.day}:${r.hour}:${r.minute}:${r.second}`
+    //console.log(r) // for example: {year:0,month:0,week:1,day:2,hour:34,minute:56,second:7}
+    //console.log(`${r.day}:${r.hour}:${r.minute}:${r.second}`)
 }
-/** */
-function readFile(fn, cb) {
-  fs.readFile('../data/vdata.json', (err, data) => {  
-    cb( { err: err, data: data } )
-  })
-}
+
+

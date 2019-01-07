@@ -4,7 +4,7 @@ const createError = require('http-errors')
 , cookieParser = require('cookie-parser')
 , logger = require('morgan')
 
-, indexRouter = require('./routes/index')
+, indexRouter = require('./routes/indexc')
 
 , app = express()
 ,favicon = require('serve-favicon')
