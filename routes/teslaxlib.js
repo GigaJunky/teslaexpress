@@ -57,6 +57,10 @@ function lastVehicleData(voptions, cb){
     })
 }
 
+function lastVehicleDataAsync(voptions){
+    return  {err: null, vehicle: JSON.parse(fs.readFileSync(vdataFN))}
+}
+
   function vehicleData(voptions, cb){
     tjs.vehicleData(voptions, function (err, vehicle) {
       if (!err) saveData(vehicle)
@@ -71,9 +75,9 @@ function vehicles(voptions, cb) {
 
 function wakeUp(voptions, cb) {
     var wuElapsed = Date.now() - lastWakeup / 1000
-    ,   vdElapsed = Date.now() - lastVData  / 1000
-    if ( wuElapsed < 30 || vdElapsed < 30 * 60 )
-        cb('last wakeup elasped:' + wuElapsed + 'vd' + vdElapsed , null )
+    //,   vdElapsed = Date.now() - lastVData  / 1000
+    if ( wuElapsed < 30) // || vdElapsed < 30 * 60 )
+        cb('last wakeup elasped:' + wuElapsed  , null )
     else
     tjs.wakeUp(voptions, (err, vehicles) => {
         if(!err) lastWakeup = Date.now()
@@ -86,6 +90,7 @@ function wakeUp(voptions, cb) {
       saveData: saveData,
       vehicles: vehicles,
       lastVehicleData: lastVehicleData,
+      lastVehicleDataAsync: lastVehicleDataAsync,
       vehicleData: vehicleData,
       wakeUp: wakeUp
 }
