@@ -3,13 +3,17 @@ const
 , Poller = require('./poller')
 , tjx = require ('../routes/teslaxlib')
 
-var pollInterval = 5, sleepMins = 30, onlineMins = 5, lastWakeup, polCount = 1, lastOnline = 0
+var pollInterval = 1 * 60, sleepMins = 30, onlineMins = 5, lastWakeup, polCount = 1, loElapsedLimit = 5
+, lvd = tjx.lastVehicleDataAsync(voptions)
+, lastOnline = lvd.vehicle.vehicle_state.timestamp
+, loElapsedMins = (Date.now() - lastOnline) / 60000
+
 let poller = new Poller( pollInterval * 1000)
 
 poller.onPoll(() => {
     CheckStates()
     poller.poll(pollInterval * 1000)
-    console.log('polCount:  ', polCount)
+    console.log('polCount:  ', polCount++)
 })
 
 process.stdout.write('\033c')
@@ -28,7 +32,7 @@ function CheckStates()
         if(vehicles)
         for(var v of vehicles){
             console.log("vehicle: ", v.display_name, v.state, v.in_service, now.toLocaleString())
-            var loElapsedMins = (Date.now() - lastOnline) / 60000
+            loElapsedMins = (Date.now() - lastOnline) / 60000
             console.log('loElapsedMins: ', loElapsedMins)
 
             switch(v.state) {
@@ -50,11 +54,12 @@ function CheckStates()
                 case 'online':
                     console.log('online in service', v.in_service)
                     //if (!v.in_service)
-                    if(loElapsedMins > 30){
+                    UpdateTimes()
+                    if(loElapsedMins > loElapsedLimit){
                         tjx.vehicleData(voptions, (err, vdata) =>{
                              if (err) console.error('vdata: ', err)
                              else
-                             lastOnline = vdata.vehicle_state.timestamp
+                             UpdateTimes()
                             })
                     }
                     //else
@@ -64,21 +69,29 @@ function CheckStates()
 
                     break
                 default:
-                    console.log('Vehicle State Not Online : ',  v.state, lastOnline )
-                    if(loElapsedMins > 30){
-                        var lvd = tjx.lastVehicleDataAsync(voptions)
-                        lastOnline = lvd.vehicle.vehicle_state.timestamp
-                        console.log('Offline lastVehicleData: ', err, new Date(lastOnline).toLocaleString(), elapsedSC(lastOnline), loElapsedMins)
-                        tjx.wakeUp(voptions, function (err, result) {
-                            console.log("Waking up, Vehicle state: " + err | result.state)
-                        })
-    
-                    }
+                    UpdateTimes()
+                    console.log('Vehicle State Not Online : ',  v.state)
             }
             //if(v.state === 'online') vehicleData(voptions, (err, vdata) => console.log('vdata: ', err))
         }
     })
 }
+
+function UpdateTimes()
+{
+    console.log('UpdateTimes: ', new Date(lastOnline).toLocaleString(), elapsedSC(lastOnline), loElapsedMins,  (loElapsedMins > loElapsedLimit) )
+
+    if(loElapsedMins > loElapsedLimit){
+        lvd = tjx.lastVehicleDataAsync(voptions)
+        lastOnline = lvd.vehicle.vehicle_state.timestamp
+        loElapsedMins = (Date.now() - lastOnline) / 60000
+        tjx.wakeUp(voptions, function (err, result) {
+            console.log("Waking up, Vehicle state: ", err , result)
+        })
+    }
+
+}
+
 
 function elapsed(timestamp)
 {
