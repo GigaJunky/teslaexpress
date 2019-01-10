@@ -3,10 +3,11 @@ const
 , Poller = require('./poller')
 , tjx = require ('../routes/teslaxlib')
 
-var pollInterval = 1 * 60, sleepMins = 30, onlineMins = 5, lastWakeup, polCount = 1, loElapsedLimit = 5
+let pollInterval = 30, polCount = 1, loElapsedLimit = 30
 , lvd = tjx.lastVehicleDataAsync(voptions)
 , lastOnline = lvd.vehicle.vehicle_state.timestamp
 , loElapsedMins = (Date.now() - lastOnline) / 60000
+console.log(`!LastOnline %s loElapsedMins: %s, %s`,  new Date(lastOnline).toLocaleString(), round(loElapsedMins, 2),  elapsedSC(lastOnline))
 
 let poller = new Poller( pollInterval * 1000)
 
@@ -18,91 +19,52 @@ poller.onPoll(() => {
 
 process.stdout.write('\033c')
 CheckStates()
-poller.poll()
+poller.poll(pollInterval * 1000)
 
 function CheckStates()
 {
-    var now = new Date()
+    let now = new Date()
     tjx.vehicles(voptions, (err, vehicles) => {
         if(err) console.error(err)
-        //console.log('v: ', vehicles)
         if(!vehicles) console.error('No Vehicles?!')
-        //console.log('vs:',vehicles)
-        //console.log('get Vehicles!: ', err, vehicles.length)
         if(vehicles)
-        for(var v of vehicles){
-            console.log("vehicle: ", v.display_name, v.state, v.in_service, now.toLocaleString())
-            loElapsedMins = (Date.now() - lastOnline) / 60000
-            console.log('loElapsedMins: ', loElapsedMins)
-
-            switch(v.state) {
-                /*
-                case 'asleep':
-                    console.log('lastOnline: ', new Date(lastOnline), elapsedSC(lastOnline))
-                    tjx.lastVehicleData(voptions, (err, vehicle) =>{
-                        lastOnline = vehicle.vehicle_state.timestamp
-                        console.log('Offline lastVehicleData: ', err, elapsedSC(vehicle.vehicle_state.timestamp))
+        for(let v of vehicles){
+            if(loElapsedMins > loElapsedLimit){
+                if(v.state !== 'online'){
+                    lvd = tjx.lastVehicleDataAsync(voptions)
+                    lastOnline = lvd.vehicle.vehicle_state.timestamp
+                    tjx.wakeUp(voptions, (err, result) => {
+                        console.log("Waking up, Vehicle state: ", err ,  result ? result.state : result)
                     })
-                if(false)
-                    tjx.wakeUp(voptions, function (err, result) {
-                        if (err) console.error('wakeup err: ', err)
-                        else 
-                        console.log("WakeUp command: Succeeded, Vehicle state: " + result.state)
+                } else {
+                    tjx.vehicleData(voptions, (err, vehicle) =>{
+                        if (err) console.error('vdata err: ', err)
+                        else {
+                            let vs = vehicle.vehicle_state
+                            let ds = vehicle.drive_state
+                            console.log(`veh online: shift: %s odometer %s user: %s near homelink: %s delta: %s`,
+                            ds.shift_state, vs.odometer, vs.is_user_present, vs.homelink_nearby, vehicle.delta)
+                            lastOnline = vehicle.vehicle_state.timestamp
+                             pollInterval = vs.is_user_present ? 60 : 30 * 60
+                             console.log(`user: %s polInterval: %s`, vs.is_user_present, pollInterval)
+                        }
                     })
-                    break
-                */
-                case 'online':
-                    console.log('online in service', v.in_service)
-                    //if (!v.in_service)
-                    UpdateTimes()
-                    if(loElapsedMins > loElapsedLimit){
-                        tjx.vehicleData(voptions, (err, vdata) =>{
-                             if (err) console.error('vdata: ', err)
-                             else
-                             UpdateTimes()
-                            })
-                    }
-                    //else
-                    //    tjx.lastVehicleData(voptions, (err, vehicle) =>{
-                    //        console.log('Online !_in_service lastVehicleData: ', err,  elapsedSC(vehicle.vehicle_state.timestamp))
-                    //    })
-
-                    break
-                default:
-                    UpdateTimes()
-                    console.log('Vehicle State Not Online : ',  v.state)
+                }
+                loElapsedMins = (Date.now() - lastOnline) / 60000
             }
-            //if(v.state === 'online') vehicleData(voptions, (err, vdata) => console.log('vdata: ', err))
+
+            console.log(`vehicle: %s  state: %s now: %s`, v.display_name, v.state, now.toLocaleString())
+
+            loElapsedMins = (Date.now() - lastOnline) / 60000
+            console.log(`LastOnline %s loElapsedMins: %s, %s`,  new Date(lastOnline).toLocaleString(), round(loElapsedMins, 2),  elapsedSC(lastOnline))
         }
     })
-}
-
-function UpdateTimes()
-{
-    console.log('UpdateTimes: ', new Date(lastOnline).toLocaleString(), elapsedSC(lastOnline), loElapsedMins,  (loElapsedMins > loElapsedLimit) )
-
-    if(loElapsedMins > loElapsedLimit){
-        lvd = tjx.lastVehicleDataAsync(voptions)
-        lastOnline = lvd.vehicle.vehicle_state.timestamp
-        loElapsedMins = (Date.now() - lastOnline) / 60000
-        tjx.wakeUp(voptions, function (err, result) {
-            console.log("Waking up, Vehicle state: ", err , result)
-        })
-    }
-
-}
-
-
-function elapsed(timestamp)
-{
-    var now = Date.now()
-    console.log('elapsed', timestamp, now, (now - timestamp) / 1000)
 }
 
 //https://stackoverflow.com/questions/13903897/javascript-return-number-of-days-hours-minutes-seconds-between-two-dates
 function elapsedSC(timestamp)
 {
-    var r = {}, d = Math.abs(Date.now() - timestamp) / 1000
+    let r = {}, d = Math.abs(Date.now() - timestamp) / 1000
     , s = { year: 31536000, month: 2592000, week: 604800, day: 86400, hour: 3600, minute: 60,second: 1 } // uncomment row to ignore// feel free to add your own row
     Object.keys(s).forEach(function(key){
         r[key] = Math.floor(d / s[key])
@@ -113,4 +75,6 @@ function elapsedSC(timestamp)
     //console.log(`${r.day}:${r.hour}:${r.minute}:${r.second}`)
 }
 
-
+function round(value, decimals) {
+    return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
+  }
