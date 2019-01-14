@@ -2,6 +2,10 @@
 
 var wakeUpTimmer = null
 
+function bodyOnload()
+{
+  console.log('bodyOnload')
+}
 
 function bodyOnloadX()
 {
@@ -11,9 +15,8 @@ function bodyOnloadX()
   wakeUpTimmerStart()
 }
 
-
 function wakeUpStatus() {
-  ajax('wakeup', (result) => {
+  ajax('/wakeup', (result) => {
     console.log('wakeUp Status', result.err, 'state: ', result.result.state, 'timmer: ', wakeUpTimmer, new Date().toLocaleString())
     var msg =  result.err !== null ? result.err : result.result.state
     setAllHTMLText('.vstate', msg + ', ' + new Date().toLocaleString())

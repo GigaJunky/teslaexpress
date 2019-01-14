@@ -3,11 +3,11 @@ const
 , Poller = require('./poller')
 , tjx = require ('../routes/teslaxlib')
 
-let pollInterval = 30, polCount = 1, loElapsedLimit = 30
+let pollInterval = 10, polCount = 1, loElapsedLimit = 30, lastCheckState = 0
 , lvd = tjx.lastVehicleDataAsync(voptions)
 , lastOnline = lvd.vehicle.vehicle_state.timestamp
 , loElapsedMins = (Date.now() - lastOnline) / 60000
-console.log(`!LastOnline %s loElapsedMins: %s, %s`,  new Date(lastOnline).toLocaleString(), round(loElapsedMins, 2),  elapsedSC(lastOnline))
+console.log(`Check State Started: LastOnline %s loElapsedMins: %s, %s`,  new Date(lastOnline).toLocaleString(), round(loElapsedMins, 2),  elapsedSC(lastOnline))
 
 let poller = new Poller( pollInterval * 1000)
 
@@ -24,39 +24,39 @@ poller.poll(pollInterval * 1000)
 function CheckStates()
 {
     let now = new Date()
+    if(now - lastCheckState> (15 * 60000)) //15 min
     tjx.vehicles(voptions, (err, vehicles) => {
         if(err) console.error(err)
         if(!vehicles) console.error('No Vehicles?!')
-        if(vehicles)
-        for(let v of vehicles){
-            if(loElapsedMins > loElapsedLimit){
-                if(v.state !== 'online'){
-                    lvd = tjx.lastVehicleDataAsync(voptions)
-                    lastOnline = lvd.vehicle.vehicle_state.timestamp
-                    tjx.wakeUp(voptions, (err, result) => {
-                        console.log("Waking up, Vehicle state: ", err ,  result ? result.state : result)
-                    })
-                } else {
-                    tjx.vehicleData(voptions, (err, vehicle) =>{
-                        if (err) console.error('vdata err: ', err)
-                        else {
-                            let vs = vehicle.vehicle_state
-                            let ds = vehicle.drive_state
-                            console.log(`veh online: shift: %s odometer %s user: %s near homelink: %s delta: %s`,
-                            ds.shift_state, vs.odometer, vs.is_user_present, vs.homelink_nearby, vehicle.delta)
-                            lastOnline = vehicle.vehicle_state.timestamp
-                             pollInterval = vs.is_user_present ? 60 : 30 * 60
-                             console.log(`user: %s polInterval: %s`, vs.is_user_present, pollInterval)
-                        }
-                    })
+        else{
+            lastCheckState = now
+            for(let v of vehicles){
+                if(loElapsedMins > loElapsedLimit){
+                    if(v.state !== 'online'){
+                        lvd = tjx.lastVehicleDataAsync(voptions)
+                        lastOnline = lvd.vehicle.vehicle_state.timestamp
+                        console.log('offline %s %s', v.display_name, v.state)
+                    } else {
+                        tjx.vehicleData(voptions, (err, vehicle) =>{
+                            if (err) console.error('vdata err: ', err)
+                            else {
+                                let vs = vehicle.vehicle_state
+                                let ds = vehicle.drive_state
+
+                                lastOnline = vehicle.vehicle_state.timestamp
+                                //pollInterval = vs.is_user_present ? 60 : 10 * 60
+
+                                console.log(`veh pol: %s online: shift: %s odometer %s user: %s near homelink: %s delta: %s`,
+                                pollInterval, ds.shift_state, vs.odometer, vs.is_user_present, vs.homelink_nearby, vehicle.delta)
+                            }
+                        })
+                    }
+                    loElapsedMins = (now - lastOnline) / 60000
                 }
-                loElapsedMins = (Date.now() - lastOnline) / 60000
+                console.log(`vehicle: %s  state: %s now: %s LastOnline %s loElapsedMins: %s, %s`,
+                v.display_name, v.state, now.toLocaleString(),
+                new Date(lastOnline).toLocaleString(), round(loElapsedMins, 2),  elapsedSC(lastOnline))
             }
-
-            console.log(`vehicle: %s  state: %s now: %s`, v.display_name, v.state, now.toLocaleString())
-
-            loElapsedMins = (Date.now() - lastOnline) / 60000
-            console.log(`LastOnline %s loElapsedMins: %s, %s`,  new Date(lastOnline).toLocaleString(), round(loElapsedMins, 2),  elapsedSC(lastOnline))
         }
     })
 }
@@ -77,4 +77,4 @@ function elapsedSC(timestamp)
 
 function round(value, decimals) {
     return Number(Math.round(value+'e'+decimals)+'e-'+decimals);
-  }
+}

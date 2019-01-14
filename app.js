@@ -4,8 +4,6 @@ const createError = require('http-errors')
 , cookieParser = require('cookie-parser')
 , logger = require('morgan')
 
-, indexRouter = require('./routes/indexc')
-
 , app = express()
 ,favicon = require('serve-favicon')
 // view engine setup
@@ -19,7 +17,9 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(favicon(path.join(__dirname,'public','images','favicon.ico')));
 
-app.use('/', indexRouter);
+//app.use('/', indexRouter);
+app.use('/', require('./routes/indexc'))
+app.use('/reports', require('./routes/reports'))
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

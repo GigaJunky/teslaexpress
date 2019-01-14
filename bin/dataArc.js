@@ -3,7 +3,7 @@ const fs = require('fs')
 var path = '../data/'
 
 fs.readdir(path, (err, items) => {
-    for (var f of items){
+    for (var f of items.filter(o=> o.length !== 23 )){
         let file = path + f
         fs.stat( file,  (err, stats) => {
             let fd = file.match(/\d+/g)
