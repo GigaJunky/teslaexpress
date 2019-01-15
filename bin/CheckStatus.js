@@ -3,35 +3,40 @@ const
 , Poller = require('./poller')
 , tjx = require ('../routes/teslaxlib')
 
-let pollInterval = 10, polCount = 1, loElapsedLimit = 30, lastCheckState = 0
+let pollInterval = 10, polCount = 1, loElapsedLimit = 30 * 60000, lastCheckState = 0,  lastStateLimit = 5 * 60000
 , lvd = tjx.lastVehicleDataAsync(voptions)
 , lastOnline = lvd.vehicle.vehicle_state.timestamp
-, loElapsedMins = (Date.now() - lastOnline) / 60000
-console.log(`Check State Started: LastOnline %s loElapsedMins: %s, %s`,  new Date(lastOnline).toLocaleString(), round(loElapsedMins, 2),  elapsedSC(lastOnline))
+//, loElapsedMins = (Date.now() - lastOnline) / 60000
+console.log(`Check State Started: LastOnline %s loElapsedMins: %s`,  new Date(lastOnline).toLocaleString(), elapsedSC(lastOnline))
 
 let poller = new Poller( pollInterval * 1000)
 
 poller.onPoll(() => {
     CheckStates()
     poller.poll(pollInterval * 1000)
-    console.log('polCount:  ', polCount++)
+    process.stdout.write("pollCount: " + polCount++ +  "\r");
 })
 
 process.stdout.write('\033c')
 CheckStates()
 poller.poll(pollInterval * 1000)
 
+function elapsedMins(timestamp)
+{
+    return round((Date.now() - timestamp) / 60000, 2)
+}
+
 function CheckStates()
 {
-    let now = new Date()
-    if(now - lastCheckState> (15 * 60000)) //15 min
+    let now = Date.now()
+    if(now - lastCheckState> lastStateLimit)
     tjx.vehicles(voptions, (err, vehicles) => {
         if(err) console.error(err)
         if(!vehicles) console.error('No Vehicles?!')
         else{
             lastCheckState = now
             for(let v of vehicles){
-                if(loElapsedMins > loElapsedLimit){
+                if(now - lastOnline > loElapsedLimit){
                     if(v.state !== 'online'){
                         lvd = tjx.lastVehicleDataAsync(voptions)
                         lastOnline = lvd.vehicle.vehicle_state.timestamp
@@ -47,15 +52,14 @@ function CheckStates()
                                 //pollInterval = vs.is_user_present ? 60 : 10 * 60
 
                                 console.log(`veh pol: %s online: shift: %s odometer %s user: %s near homelink: %s delta: %s`,
-                                pollInterval, ds.shift_state, vs.odometer, vs.is_user_present, vs.homelink_nearby, vehicle.delta)
+                                pollInterval, ds.shift_state, round(vs.odometer,2), vs.is_user_present, vs.homelink_nearby, vehicle.delta)
                             }
                         })
                     }
-                    loElapsedMins = (now - lastOnline) / 60000
                 }
-                console.log(`vehicle: %s  state: %s now: %s LastOnline %s loElapsedMins: %s, %s`,
-                v.display_name, v.state, now.toLocaleString(),
-                new Date(lastOnline).toLocaleString(), round(loElapsedMins, 2),  elapsedSC(lastOnline))
+                console.log(`vehicle: %s  state: %s now: %s LastOnline %s loElapsedMins: %s`,
+                v.display_name, v.state, new Date(now).toLocaleString(),
+                new Date(lastOnline).toLocaleString(), elapsedSC(lastOnline))
             }
         }
     })
