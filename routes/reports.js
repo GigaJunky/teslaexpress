@@ -5,6 +5,16 @@ fs = require('fs')
   , dataPath = __dirname + '/../data/'
   , vdataFN = dataPath + 'vdata.json'
 
+function VehicleData(id)
+{
+    let fn = dataPath + 'vdata' + id + '.json'
+    return JSON.parse(fs.readFileSync(fn))
+}
+
+router.get('/vehicleDataJ/:id', function (req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*')
+    res.json(VehicleData(req.params.id))
+})
 
 router.get('/vehicleData/:id', function (req, res, next) {
     let fn = dataPath + 'vdata' + req.params.id + '.json'
@@ -20,6 +30,22 @@ router.get('/vdelta/:id', (req, res) => {
 
 
 router.get('/', function (req, res, next) {
+    getVehicleDataList((err, ff) => {
+        res.render('files', { title: 'Tesla Vehicle File list Report ', files: ff, err: err })  
+    })
+})
+
+router.get('/getVehicleDataList', function (req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*')
+    getVehicleDataList((err,ff) => {
+    //res.json(err, ff)
+    res.status(200).json(ff)
+    })
+})
+
+
+function getVehicleDataList(cb)
+{
     fs.readdir(dataPath, (err, files) => {
         let ff = files.filter(o=> o.length === 23).map((f, i) => {
             let fd = f.match(/\d+/g)
@@ -41,9 +67,12 @@ router.get('/', function (req, res, next) {
                 } 
         })
         console.log(ff)
-        res.render('files', { title: 'Tesla Vehicle File list Report ', files: ff, err: err })  
+        cb(null, ff)
+        //res.render('files', { title: 'Tesla Vehicle File list Report ', files: ff, err: err })  
     })
-})
+
+
+}
 
 function round(value, decimals) {
     return Number(Math.round(value+'e'+decimals)+'e-'+decimals);

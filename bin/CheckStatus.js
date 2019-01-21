@@ -3,7 +3,7 @@ const
 , Poller = require('./poller')
 , tjx = require ('../routes/teslaxlib')
 
-let pollInterval = 10, polCount = 1, loElapsedLimit = 30 * 60000, lastCheckState = 0,  lastStateLimit = 5 * 60000
+let oneMin = 60000, pollInterval = 10, polCount = 1, loElapsedLimit = 5 * oneMin, lastCheckState = 0,  lastStateLimit = 10 * oneMin, wuLimit = 11 * 60 * oneMin
 , lvd = tjx.lastVehicleDataAsync(voptions)
 , lastOnline = lvd.vehicle.vehicle_state.timestamp
 //, loElapsedMins = (Date.now() - lastOnline) / 60000
@@ -40,6 +40,8 @@ function CheckStates()
                     if(v.state !== 'online'){
                         lvd = tjx.lastVehicleDataAsync(voptions)
                         lastOnline = lvd.vehicle.vehicle_state.timestamp
+                        if(now - lastOnline > wuLimit) tjx.wakeUp(voptions, status => console.log('wake up status: ', status))
+
                         console.log('offline %s %s', v.display_name, v.state)
                     } else {
                         tjx.vehicleData(voptions, (err, vehicle) =>{

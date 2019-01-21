@@ -3,7 +3,7 @@ const fs = require('fs')
 , tjx = require('../routes/teslaxlib')
 , voptions = require('../data/vtoken.json')
 
-let lastWakeup = Date.now(), lastVData
+let lastWakeup = 60001, lastVData
   
 const jdOpts = {
     textDiff: { minLength: 160 },
@@ -58,15 +58,13 @@ function lastVehicleDataAsync(voptions){
 
 
 function wakeUp(voptions, cb) {
-    let wuElapsed = (Date.now() - lastWakeup) / 1000
-    //,   vdElapsed = Date.now() - lastVData  / 1000
-    if ( wuElapsed < 60) // || vdElapsed < 30 * 60 )
+    if (Date.now() - lastWakeup  < 60000) 
         cb('last wakeup elasped:' + wuElapsed, null )
     else
-    tjs.wakeUp(voptions, (err, vehicles) => {
-        console.log('Waking Up: ', wuElapsed)
+    tjs.wakeUp(voptions, (err, veh) => {
+        console.log('Waking Up: ', lastWakeup, err, veh)
         if(!err) lastWakeup = Date.now()
-        cb(err, vehicles)
+        cb(err, veh)
     })
 }
 
